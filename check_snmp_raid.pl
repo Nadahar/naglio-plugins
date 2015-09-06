@@ -306,6 +306,7 @@ my $o_host =            undef;  # hostname
 my $o_timeout=          undef;  # Timeout (Default 20 or what is set in utils.pm, see above) 
 my $o_help=             undef;  # wan't some help ?
 my $o_version=          undef;  # print version
+my $o_usage=            undef;  # print usage
 my $opt_cardtype=       undef;  # option to sets card type i.e. 'sasraid' or 'megaraid', or 'mptfusion' or 'perc3', 'perc5' etc
 my $opt_alert=          undef;  # what type of alert to issue
 my $opt_debug=          undef;  # verbose mode/debug file name
@@ -407,7 +408,7 @@ sub set_oids {
     #   'degraded' if it is CRITICAL is forced to WARNING if drive is being rebuild and has WARNING state
     #   'initialize' & checkconsistency are just regular WARNING and no longer have special meaning
     %LOGDRV_CODES = (
-        0 => ['offline', 'drive is offline', 'NONE' ],
+        0 => ['offline', 'drive is offline', 'WARNING' ],
         1 => ['degraded', 'array is degraded', 'CRITICAL' ],
         2 => ['optimal', 'functioning properly', 'OK' ],
         3 => ['initialize', 'currently initializing', 'WARNING' ],
@@ -437,7 +438,7 @@ sub set_oids {
     #   'degraded' if it is CRITICAL is forced to WARNING if drive is being rebuild and has WARNING state
     #   'initialize' & checkconsistency are just regular WARNING and no longer have special meaning
     %LOGDRV_CODES = (
-        0 => ['offline', 'volume is offline', 'NONE' ],
+        0 => ['offline', 'volume is offline', 'WARNING' ],
         1 => ['degraded', 'parially degraded', 'CRITICAL' ],
         2 => ['degraded', 'fully degraded', 'CRITICAL' ],
         3 => ['optimal', 'functioning properly', 'OK' ]
@@ -478,7 +479,7 @@ sub set_oids {
     #   'degraded' if it is CRITICAL is forced to WARNING if drive is being rebuild and has WARNING state
     #   'initialize' & checkconsistency are just regular WARNING and no longer have special meaning
     %LOGDRV_CODES = (
-        0 => ['offline', 'volume is offline', 'NONE' ],
+        0 => ['offline', 'volume is offline', 'WARNING' ],
         1 => ['degraded', 'parially degraded', 'CRITICAL' ],
         2 => ['degraded', 'fully degraded', 'CRITICAL' ],
         3 => ['optimal', 'functioning properly', 'OK' ]
@@ -759,9 +760,18 @@ sub print_version {
 
 # display usage information
 sub print_usage {
-        print "Usage:\n";
-        print "$0 [-s <snmp_version>] -H <host> (-C <snmp_community>) | (-l login -x passwd [-X pass -L <authp>,<privp>) [-p <port>] [-t <timeout>] [-O <base oid>] [-A <status label text>] [-a <alert level>] [--extra_info] [--check_battery] [--multiple_controllers] [-g <num good drives>] [--drive_errors -P <previous performance data> -S <previous state>] [-v [DebugLogFile] || -d DebugLogFile] [--debug_time] [--snmp_optimize] [--bulk_snmp_queries=<optimize|std|on|off>] [--msgsize=<num octets>] [-T megaraid|sasraid|perc3|perc4|perc5|perc6|mptfusion|sas6ir|sas6|adaptec|smartarray|eti|ultrastor|synology\n OR \n";
-        print "$0 --version | $0 --help (use this to see get more detailed documentation of above options)\n";
+        print "Usage:\n$0 [-H <host>]\n",<<EOT;
+  [-s <snmp_version>] [-p <port>] [-t <timeout>]
+  [(-C <snmp_community>) | (-l login -x passwd [-X pass -L <authp>,<privp>)]
+  [-O <base oid>] [-A <label text>] [-a <alert level>] [-g <n good drives>]
+  [-T megaraid|sasraid|perc3|perc4|perc5|perc6|mptfusion|sas6ir|sas6|adaptec|
+      smartarray|eti|ultrastor|synology]
+  [-i|--extra_info] [-e|--drive_errors] [-o|--snmp_optimize] [-b|--check_battery]
+  [-m|--multiple_controllers] [-v|-d [DebugLogFile]] [--debug_time]
+  [-P [<previous performance data>]] [-S <previous state>]
+  [--bulk_snmp_queries=<optimize|std|on|off>] [--msgsize=<num octets>]
+  [-h|--help] [-V|--version] [-u|--usage]
+EOT
 }
 
 sub usage {
@@ -826,7 +836,7 @@ sub help {
         print "    Proper use of this is have '-S ".'"$SERVICESTATE$,$SERVICESTATETYPE$"'."' in your commands.cfg\n";
         print "\nSNMP Access Options:\n";
         print "  -H, --hostname <host>\n";
-        print "    Hostname or IP address of target to check\n";
+        print "    Hostname or IP address of target to check (defaults to localhost)\n";
         print "  -O, --oid <base oid>\n";
         print "    Base OID is normally set based on your controller and you almost never need to change it\n";
         print "    unless you custom-set it different for your card (the only case I know is when you have both\n";
@@ -836,7 +846,7 @@ sub help {
         print "  -p, --port <port>\n";
         print "    SNMP port (defaults to 161)\n";
         print "  -C, --community <community>\n";
-        print "    SNMP community string (for SNMP v1 and v2 only)\n";
+        print "    SNMP community string (for SNMP v1 and v2 only, defaults to public)\n";
         print "  -l, --login=LOGIN ; -x, --passwd=PASSWD\n";
         print "    Login and auth password for snmpv3 authentication\n";
         print "    If no priv password exists, implies AuthNoPriv\n";
@@ -926,6 +936,7 @@ sub check_options {
   GetOptions (
         'h'     => \$o_help,            'help'              => \$o_help,
         'V'     => \$o_version,         'version'           => \$o_version,
+        'u'     => \$o_usage,           'usage'             => \$o_usage,
         't:s'   => \$o_timeout,         'timeout:s'         => \$o_timeout,
         'A:s'   => \$opt_label,         'label:s'           => \$opt_label,
         'O:s'   => \$opt_baseoid,       'oid:s'             => \$opt_baseoid,
@@ -956,6 +967,7 @@ sub check_options {
 
   if (defined($o_help)) { help(); exit $ERRORS{"UNKNOWN"}; };
   if (defined($o_version)) { print_version(); exit $ERRORS{"UNKNOWN"}; };
+  if (defined($o_usage)) { print_usage; exit $ERRORS{"UNKNOWN"}; };
 
   # hostname
   if (defined($o_host) && $o_host) {
@@ -965,6 +977,9 @@ sub check_options {
         else {
             usage("Invalid hostname: $o_host\n");
         }
+  }
+  elsif (!defined($o_host)){
+     $o_host = 'localhost';
   }
   else {
      usage("Hostname or IP address not specified\n");
@@ -982,7 +997,11 @@ sub check_options {
         elsif (!defined($o_community) && defined($o_login) && defined($o_passwd)) {
                 $opt_snmpversion = '3';
         }
-        else {
+        elsif (!defined($o_community)){
+                $opt_snmpversion = '1';
+                $o_community = 'public';
+        }
+        else {                
                 usage("Can not autodetect SNMP version when -C and -l are both specified\n");
         }
   }
